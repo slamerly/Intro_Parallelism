@@ -6,7 +6,7 @@ using std::cout;
 using std::endl;
 using std::vector;
 
-vector<vector<int>> matrixProd(vector<vector<int>> matA, vector<vector<int>> matB) {
+vector<vector<int>> matrixProd(vector<vector<int>> &matA, vector<vector<int>> &matB) {
 	vector<vector<int>> result;
 	vector<int> currentLine;
 	int currentRes = 0;
@@ -29,44 +29,44 @@ vector<vector<int>> matrixProd(vector<vector<int>> matA, vector<vector<int>> mat
 	return result;
 }
 
-void somProd(int positionI, int positionJ, vector<int> line, vector<int> col)
+void somProd(vector<vector<int>> &matriceRes, int positionI, int positionJ, vector<vector<int>>& matA, vector<vector<int>>& matB)
 {
-	vector<int> result = { positionI, positionJ };
 	int som = 0;
 
-	for (int i = 0; i < line.size(); i++)
+	for (int k = 0; k < matA[0].size(); k++)
 	{
-		som += line[i] * col[i];
+		som += matA[positionI][k] * matB[k][positionJ];
 	}
-	result.push_back(som);
+
+	matriceRes[positionI][positionJ] = som;
 }
 
-vector<vector<int>> matrixProdThread(vector<vector<int>> matA, vector<vector<int>> matB) {
-	vector<vector<int>> result;
+vector<vector<int>> matrixProdThread(vector<vector<int>>& matA, vector<vector<int>>& matB) {
+	vector<vector<int>> result(matA.size(), vector<int>(matB[0].size(), 0));
 	vector<int> currentLine;
 	int currentRes = 0;
 
-	vector<std::thread> threads;
+	std::vector<std::thread> threads;
 
 	for (int i = 0; i < matA.size(); i++)
 	{
 		for (int j = 0; j < matB[0].size(); j++)
 		{
-			for (int k = 0; k < matA[0].size(); k++)
-			{
-				currentRes += matA[i][k] * matB[k][j];
-			}
-			currentLine.push_back(currentRes);
-			currentRes = 0;
+			threads.emplace_back(somProd, std::ref(result), i, j, std::ref(matA), std::ref(matB));
 		}
-		result.push_back(currentLine);
-		currentLine.clear();
+	}
+
+	cout << threads.size() << endl;
+	for (unsigned int i = 0; i < threads.size(); ++i)
+	{
+		if (threads[i].joinable())
+			threads.at(i).join();
 	}
 
 	return result;
 }
 
-void displayMatrix(vector<vector<int>> mat)
+void displayMatrix(vector<vector<int>> &mat)
 {
 	for (vector<int> line : mat)
 	{
@@ -93,8 +93,14 @@ int main() {
 
 	vector<vector<int>> matProd;
 
+	cout << "Sequential version:" << endl;
 	matProd = matrixProd(matA, matB);
+	displayMatrix(matProd);
 
+	matProd.clear();
+	
+	cout << "Thread version:" << endl;
+	matProd = matrixProdThread(matA, matB);
 	displayMatrix(matProd);
 
 	return 0;
